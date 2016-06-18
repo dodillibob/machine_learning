@@ -1,22 +1,82 @@
 ---
-title: "Machine_Learning_CP"
+title: "Machine Learning Course Project"
 author: "Kirill Voronov"
-date: "5 июня 2016 г."
+date: "19 июня 2016 г."
 output: html_document
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+The goal of this project is to predict the manner in which they did the exercise. This is the **"classe"** variable in the training set. 
+
+### 1. Load the Data
+
+First, we load the required packages and the data and set seed for reproducibility
 
 ```{r}
-summary(cars)
+library(caret)
+training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+test <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+set.seed(1984)
 ```
 
-You can also embed plots, for example:
+### 2. Feature Selection
 
-```{r, echo=FALSE}
-plot(cars)
+Remowe zero covariates. **nearZeroVar** is a function in caret to identity those variables that have very little variability and will likely not be good predictors.
+
+```{r}
+nsv <- nearZeroVar(training, saveMetrics = FALSE)
+PrepTrain <- training[,-nsv]
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### 3. Set the type of resampling
+
+To modify the resampling method, a **trainControl** function is used. The option **method** controls the type of resampling and defaults to *boot*. Another method, **repeatedcv**, is used to specify repeated K–fold cross–validation (and the argument repeats controls the number of repetitions). K is controlled by the number argument and defaults to 10.
+
+```{r}
+ctrl <- trainControl(method = "repeatedcv",
+                     repeats = 3)
+```
+
+### 3. Model Fitting
+
+We used two different models (**Partial Least Squares** and **Classification tree**) and compare them
+
+```{r}
+set.seed(1984)
+rpartFit <- train(classe ~ ., 
+                  data = PrepTrain,
+                  method = "rpart",
+                  preProcess = c("center", "scale"),
+                  tuneLength = 15,
+                  trControl = ctrl)
+```
+
+```{r}
+print(rpartFit)
+```
+
+```{r}
+set.seed(1984)
+plsFit <- train(classe ~ ., 
+                  data = PrepTrain,
+                  method = "pls",
+                  preProcess = c("center", "scale"),
+                  tuneLength = 15,
+                  trControl = ctrl)
+```
+
+```{r}
+print(plsFit)
+```
+
+The **resamples** function can be used to collect, summarize and contrast the resampling results. Since the random number seeds were initialized to the same value prior to calling train, the same folds were used for each model.
+
+```{r}
+resamps <- resamples(list(pls = plsFit, rpart = rpartFit))
+summary(resamps)
+dotplot(resamps)
+```
+
+
+####Based on this analysis, the **rpart** model is slightly higher.
