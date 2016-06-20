@@ -13,10 +13,11 @@ The goal of this project is to predict the manner in which they did the exercise
 
 First, we load the required packages and the data and set seed for reproducibility
 
-```{r}
+```{r, results='hide'}
 library(caret)
-training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
-test <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+library(randomForest)
+training_Orig <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testing_Orig <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
 set.seed(1984)
 ```
 
@@ -24,28 +25,48 @@ set.seed(1984)
 
 Remowe zero covariates. **nearZeroVar** is a function in caret to identity those variables that have very little variability and will likely not be good predictors.
 
-```{r}
-nsv <- nearZeroVar(training, saveMetrics = FALSE)
-PrepTrain <- training[,-nsv]
+```{r, results='hide'}
+nsv <- nearZeroVar(training_Orig, saveMetrics = FALSE)
+PrepTrain <- training_Orig[,-nsv]
+PrepTest <- testing_Orig[,-nsv]
 ```
 
-### 3. Set the type of resampling
+Сlean data from NA's.
+
+```{r, results='hide'}
+training <- PrepTrain[, colSums(is.na(PrepTrain)) == 0]
+training <- training[, -c(1:7)]
+testing <- PrepTest[, colSums(is.na(PrepTest)) == 0]
+testing <- testing[, -c(1:7)]
+```
+
+### 3. Create data partition
+
+Remowe zero covariates. **nearZeroVar** is a function in caret to identity those variables that have very little variability and will likely not be good predictors.
+
+```{r, results='hide'}
+inTrain <- createDataPartition(y = training$classe, p = 0.7, list = FALSE)
+training <- training[inTrain,]
+validation <- training[-inTrain,]
+```
+
+### 4. Set the type of resampling
 
 To modify the resampling method, a **trainControl** function is used. The option **method** controls the type of resampling and defaults to *boot*. Another method, **repeatedcv**, is used to specify repeated K–fold cross–validation (and the argument repeats controls the number of repetitions). K is controlled by the number argument and defaults to 10.
 
-```{r}
+```{r, results='hide'}
 ctrl <- trainControl(method = "repeatedcv",
-                     repeats = 3)
+                     repeats = 3, classProbs = TRUE)
 ```
 
-### 3. Model Fitting
+### 5. Model Fitting
 
-We used two different models (**Partial Least Squares** and **Classification tree**) and compare them
+We used two different models (**Random Forest** and **Classification tree**) and compare them
 
-```{r}
+```{r, results='hide'}
 set.seed(1984)
 rpartFit <- train(classe ~ ., 
-                  data = PrepTrain,
+                  data = training,
                   method = "rpart",
                   preProcess = c("center", "scale"),
                   tuneLength = 15,
@@ -56,27 +77,31 @@ rpartFit <- train(classe ~ .,
 print(rpartFit)
 ```
 
-```{r}
+```{r, results='hide'}
 set.seed(1984)
-plsFit <- train(classe ~ ., 
-                  data = PrepTrain,
-                  method = "pls",
-                  preProcess = c("center", "scale"),
-                  tuneLength = 15,
-                  trControl = ctrl)
+rfFit <- randomForest(classe ~ ., data = training)
 ```
 
 ```{r}
-print(plsFit)
+print(rfFit)
 ```
 
-The **resamples** function can be used to collect, summarize and contrast the resampling results. Since the random number seeds were initialized to the same value prior to calling train, the same folds were used for each model.
+Based on this analysis, the **Random Forest** model is much higher:
+
+
+OOB estimate of  error rate is very low.
+
+#### The out of sample error
 
 ```{r}
-resamps <- resamples(list(pls = plsFit, rpart = rpartFit))
-summary(resamps)
-dotplot(resamps)
+rfClasses <- predict(rfFit, newdata = validation)
+err <- confusionMatrix(validation$classe, rfClasses)
+err$overall[1]
+err$table
 ```
 
+### 5. Apply the model
 
-####Based on this analysis, the **rpart** model is slightly higher.
+```{r}
+predict(rfFit, newdata = testing)
+```
