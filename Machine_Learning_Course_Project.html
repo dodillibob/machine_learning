@@ -127,18 +127,9 @@ $(document).ready(function () {
 <div id="load-the-data" class="section level3">
 <h3>1. Load the Data</h3>
 <p>First, we load the required packages and the data and set seed for reproducibility</p>
-<pre class="r"><code>library(caret)</code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(randomForest)</code></pre>
-<pre><code>## randomForest 4.6-12</code></pre>
-<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre><code>## 
-## Attaching package: 'randomForest'</code></pre>
-<pre><code>## The following object is masked from 'package:ggplot2':
-## 
-##     margin</code></pre>
-<pre class="r"><code>training_Orig &lt;- read.csv(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;)
+<pre class="r"><code>library(caret)
+library(randomForest)
+training_Orig &lt;- read.csv(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;)
 testing_Orig &lt;- read.csv(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;)
 set.seed(1984)</code></pre>
 </div>
@@ -177,7 +168,6 @@ rpartFit &lt;- train(classe ~ .,
                   preProcess = c(&quot;center&quot;, &quot;scale&quot;),
                   tuneLength = 15,
                   trControl = ctrl)</code></pre>
-<pre><code>## Loading required package: rpart</code></pre>
 <pre class="r"><code>print(rpartFit)</code></pre>
 <pre><code>## CART 
 ## 
